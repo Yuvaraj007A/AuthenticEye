@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.env
+*.egg-info/
+dist/
+build/
+
+# Frontend build
+frontend/dist/
+frontend/.env
+
+# Backend uploads (user files)
+backend/uploads/
+
+# AI model checkpoints (large binary files)
+ai-service/checkpoints/*.pth
+ai-service/checkpoints/*.pt
+
+# Logs & temp
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+tensorboard_logs/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp

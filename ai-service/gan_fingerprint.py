@@ -1,0 +1,172 @@
+"""
+AuthenticEye — Step 3: GAN Fingerprint Detector
+Every GAN model family (StyleGAN, PGGAN, CycleGAN) leaves a unique 
+forensic fingerprint in the residual noise of generated images.
+This module extracts and classifies those fingerprints.
+"""
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.models as models
+import torchvision.transforms as T
+import numpy as np
+from PIL import Image
+import cv2
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class ResidualNoiseCNN(nn.Module):
+    """
+    CNN classifier operating on residual noise maps.
+    GAN fingerprints are subtle high-frequency patterns in the noise layer.
+    """
+    def __init__(self):
+        super().__init__()
+        self.base = models.efficientnet_b0(weights="IMAGENET1K_V1")
+        self.base.classifier[-1] = nn.Linear(1280, 1)
+
+    def forward(self, x):
+        return torch.sigmoid(self.base(x))
+
+
+class GANFingerprintDetector:
+    """
+    Detects GAN generator fingerprints by analyzing residual noise patterns.
+    
+    Scientific Background:
+    - Marra et al. (2019) showed that GANs leave consistent, model-specific
+      high-frequency noise patterns (similar to camera PRNU noise).
+    - These 'fingerprints' can identify which GAN family generated an image.
+    - We use high-pass filtering to isolate these patterns from image content.
+    """
+
+    def __init__(self):
+        self.model = ResidualNoiseCNN().to(DEVICE)
+        self.model.eval()
+
+        self._transform = T.Compose([
+            T.Resize((224, 224)),
+            T.ToTensor(),
+            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+
+        # High-pass filter kernel (captures fine-grained noise)
+        self._hp_kernel = np.array([
+            [-1, -1, -1],
+            [-1,  8, -1],
+            [-1, -1, -1],
+        ], dtype=np.float32) / 8.0
+
+    def _extract_residual_noise(self, pil_img: Image.Image) -> Image.Image:
+        """
+        Extracts residual noise map via high-pass filtering.
+        The residual = Original - Gaussian_Smooth captures the
+        high-frequency component where generator fingerprints live.
+        """
+        img_arr = np.array(pil_img.convert("RGB"), dtype=np.float32)
+
+        # Apply high-pass filter per channel
+        noise_channels = []
+        for c in range(3):
+            channel = img_arr[:, :, c]
+            # Gaussian smoothing (removes content, keeps noise)
+            smooth = cv2.GaussianBlur(channel, (5, 5), 0)
+            # Residual noise
+            residual = channel - smooth
+            # Apply Laplacian high-pass
+            hp = cv2.filter2D(residual, -1, self._hp_kernel)
+            noise_channels.append(hp)
+
+        noise_map = np.stack(noise_channels, axis=2)
+
+        # Normalize for visualization / model input
+        noise_map = noise_map - noise_map.min()
+        if noise_map.max() > 0:
+            noise_map = (noise_map / noise_map.max() * 255).astype(np.uint8)
+        else:
+            noise_map = np.zeros_like(noise_map, dtype=np.uint8)
+
+        return Image.fromarray(noise_map)
+
+    def _compute_noise_statistics(self, noise_arr: np.ndarray) -> dict:
+        """
+        Statistical analysis of the residual noise pattern.
+        GAN fingerprints show:
+        - Higher correlation across color channels (than real photos)
+        - Specific spatial periodicity patterns
+        - Non-Gaussian noise distribution (real photos are ~Gaussian)
+        """
+        if noise_arr.max() == 0:
+            return {"cross_channel_corr": 0.0, "kurtosis": 0.0, "noise_energy": 0.0}
+
+        # Cross-channel correlation (GAN: high, Real: lower)
+        r = noise_arr[:, :, 0].flatten().astype(np.float64)
+        g = noise_arr[:, :, 1].flatten().astype(np.float64)
+        b = noise_arr[:, :, 2].flatten().astype(np.float64)
+
+        corr_rg = float(np.corrcoef(r, g)[0, 1]) if np.std(r) > 0 and np.std(g) > 0 else 0.0
+        corr_rb = float(np.corrcoef(r, b)[0, 1]) if np.std(r) > 0 and np.std(b) > 0 else 0.0
+        cross_corr = (abs(corr_rg) + abs(corr_rb)) / 2.0
+
+        # Kurtosis (measures non-Gaussianity)
+        # Real photo noise is ~Gaussian (kurtosis ~3)
+        # GAN noise is often super-Gaussian (kurtosis >> 3)
+        flat = noise_arr.flatten().astype(np.float64)
+        mean = np.mean(flat)
+        std = np.std(flat)
+        if std > 0:
+            kurtosis = float(np.mean(((flat - mean) / std) ** 4))
+        else:
+            kurtosis = 0.0
+
+        # Noise energy
+        noise_energy = float(np.mean(noise_arr.astype(np.float32) ** 2))
+
+        return {
+            "cross_channel_corr": round(cross_corr, 4),
+            "kurtosis": round(kurtosis, 4),
+            "noise_energy": round(noise_energy, 4),
+        }
+
+    def predict(self, pil_img: Image.Image) -> dict:
+        """
+        Returns GAN fingerprint probability.
+        Higher = more likely to have been generated by a GAN.
+        """
+        # 1. Extract residual noise map
+        noise_img = self._extract_residual_noise(pil_img)
+        noise_arr = np.array(noise_img)
+
+        # 2. CNN classification on noise map
+        tensor = self._transform(noise_img).unsqueeze(0).to(DEVICE)
+        with torch.no_grad():
+            cnn_score = self.model(tensor).squeeze().item()
+
+        # 3. Statistical features
+        stats = self._compute_noise_statistics(noise_arr)
+
+        # Cross-channel correlation > 0.6 is a strong GAN indicator
+        # Real photos: corr ~ 0.1-0.3; GANs: 0.6-0.95
+        stat_score = min(1.0, stats["cross_channel_corr"] * 1.5)
+
+        # Kurtosis contribution: kurtosis > 6 = super-Gaussian = GAN
+        kurtosis_norm = min(1.0, max(0.0, (stats["kurtosis"] - 3.0) / 10.0))
+        stat_score = (stat_score + kurtosis_norm) / 2.0
+
+        # Final: 65% CNN, 35% statistical analysis
+        final_score = (0.65 * cnn_score) + (0.35 * stat_score)
+
+        return {
+            "gan_probability": round(min(float(final_score), 0.99), 4),
+            "fingerprint_stats": stats,
+        }
+
+
+_instance: GANFingerprintDetector = None
+
+def get_gan_detector() -> GANFingerprintDetector:
+    global _instance
+    if _instance is None:
+        _instance = GANFingerprintDetector()
+    return _instance
