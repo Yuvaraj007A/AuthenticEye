@@ -30,9 +30,9 @@ try:
     _mp_face_mesh = mp.solutions.face_mesh
     MEDIAPIPE_AVAILABLE = True
     print("✅ MediaPipe loaded for face alignment")
-except ImportError:
+except (ImportError, AttributeError, Exception):
     MEDIAPIPE_AVAILABLE = False
-    print("⚠️  MediaPipe not available — falling back to OpenCV Haar")
+    print("⚠️  MediaPipe not fully available — falling back to OpenCV Haar")
 
 # OpenCV fallback
 try:

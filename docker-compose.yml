@@ -1,7 +1,7 @@
 version: '3.9'
 
 services:
-  # ─── MongoDB ───────────────────────────────────────────────────
+  # ─── MongoDB ───
   mongodb:
     image: mongo:7
     container_name: authenticeye-mongo
@@ -9,55 +9,77 @@ services:
     volumes:
       - mongo_data:/data/db
     environment:
-      MONGO_INITDB_DATABASE: authenticeye
+      - MONGO_INITDB_DATABASE=authenticeye
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
-  # ─── Redis ─────────────────────────────────────────────────────
+  # ─── Redis ───
   redis:
     image: redis:7-alpine
     container_name: authenticeye-redis
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
-  # ─── Backend ───────────────────────────────────────────────────
+  # ─── Backend ───
   backend:
     build: ./backend
     container_name: authenticeye-backend
     restart: unless-stopped
+    env_file: .env
     environment:
       - MONGO_URI=mongodb://mongodb:27017/authenticeye
-      - JWT_SECRET=${JWT_SECRET}
       - AI_SERVICE_URL=http://ai-service:8000
       - FRONTEND_URL=http://localhost:80
-      - PORT=5000
-    ports:
-      - "5000:5000"
+      - NODE_ENV=production
     depends_on:
-      - mongodb
-      - redis
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - app-network
     volumes:
       - ./backend/uploads:/app/uploads
 
-  # ─── AI Microservice ───────────────────────────────────────────
+  # ─── AI Microservice ───
   ai-service:
     build: ./ai-service
     container_name: authenticeye-ai
     restart: unless-stopped
     environment:
       - CHECKPOINT_DIR=/app/checkpoints
-    ports:
-      - "8000:8000"
+      - PYTHONDONTWRITEBYTECODE=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 30s
+      start_period: 10s
+      retries: 3
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - app-network
     volumes:
       - ./ai-service/checkpoints:/app/checkpoints
-    # ─── GPU Support (Uncomment for CUDA GPU) ───────────────────
     # deploy:
     #   resources:
     #     reservations:
@@ -66,15 +88,19 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
-  # ─── Frontend ──────────────────────────────────────────────────
+  # ─── Frontend ───
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      args:
+        - VITE_API_URL=/api
     container_name: authenticeye-frontend
     restart: unless-stopped
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -84,3 +110,4 @@ volumes:
 networks:
   app-network:
     driver: bridge
+

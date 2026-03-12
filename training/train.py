@@ -91,8 +91,10 @@ def train_model(args):
     # Datasets
     train_ds = DeepfakeDataset(os.path.join(args.data_dir, "train"), TRAIN_TRANSFORM)
     val_ds = DeepfakeDataset(os.path.join(args.data_dir, "val"), VAL_TRANSFORM)
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=4)
+    # num_workers=0 required on Windows (multiprocessing fork issues)
+    nw = 0 if sys.platform == "win32" else 4
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=nw)
+    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=nw)
 
     # Model selection
     model_map = {

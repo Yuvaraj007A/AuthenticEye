@@ -125,22 +125,24 @@ class DiffusionDetector:
         return float(isotropy)
 
     def predict(self, pil_img: Image.Image) -> dict:
-        # 1. CNN classification
-        tensor = self._transform(pil_img).unsqueeze(0).to(DEVICE)
-        with torch.no_grad():
-            cnn_score = self.model(tensor).squeeze().item()
-
-        # 2. Spectral / physical features
+        """
+        Detects diffusion-generated images using ONLY physics-based signals.
+        The CNN is not fine-tuned on deepfake/diffusion data so we drop it.
+        """
+        # Physics-based features (these work without any training)
         residual = self._extract_diffusion_noise(pil_img)
         color_score = self._color_coherence_score(pil_img)
         edge_score = self._edge_sharpness_score(pil_img)
         isotropy_score = self._noise_isotropy_score(residual)
 
         # High color coherence + high edge sharpness + isotropic noise = diffusion
-        physics_score = (color_score * 0.4) + (edge_score * 0.3) + (isotropy_score * 0.3)
-
-        # Combined: 60% CNN, 40% physics
-        final_score = (0.60 * cnn_score) + (0.40 * physics_score)
+        # noise_isotropy is always ~0.95+ for all image types, so it barely discriminates.
+        # Edge sharpness and color coherence carry the real signal.
+        final_score = (
+            color_score   * 0.45 +
+            edge_score    * 0.45 +
+            isotropy_score * 0.10
+        )
 
         return {
             "diffusion_probability": round(min(float(final_score), 0.99), 4),

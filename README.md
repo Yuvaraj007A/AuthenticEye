@@ -40,7 +40,7 @@ Redis (Queue — future job processing)
 
 ### Prerequisites
 - Node.js ≥ 18
-- Python ≥ 3.10
+- Python ≥ 3.14
 - MongoDB running locally (or Atlas URI)
 
 ### 1. Backend Setup

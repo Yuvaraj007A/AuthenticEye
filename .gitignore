@@ -18,10 +18,14 @@ frontend/.env
 
 # Backend uploads (user files)
 backend/uploads/
+backend/.env
 
 # AI model checkpoints (large binary files)
 ai-service/checkpoints/*.pth
 ai-service/checkpoints/*.pt
+
+# Training dataset (generated images — large)
+training/data/
 
 # Logs & temp
 *.log

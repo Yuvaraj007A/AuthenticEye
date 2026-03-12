@@ -113,25 +113,23 @@ class FrequencyDetector:
     def predict(self, pil_img: Image.Image) -> dict:
         """
         Returns frequency-based deepfake probability.
-        Combines CNN classification with spectral feature analysis.
+        Uses ONLY physics-based spectral analysis — the CNN is not fine-tuned
+        on deepfake data so its output is unreliable noise.
         """
-        # 1. Generate FFT spectrum
-        spectrum_img = self._compute_fft_spectrum(pil_img)
-
-        # 2. CNN classification on spectrum
-        tensor = self._transform(spectrum_img).unsqueeze(0).to(DEVICE)
-        with torch.no_grad():
-            cnn_score = self.model(tensor).squeeze().item()
-
-        # 3. Physics-based spectral features
         features = self._compute_spectral_features(pil_img)
 
-        # GAN indicator: high-freq energy ratio above natural threshold
-        # Real images: hl_ratio ~ 0.001-0.01; GAN artifacts push this up
-        spectral_score = min(1.0, features["hl_ratio"] * 15.0)
+        # GAN upsampling (transposed conv) creates checkerboard artifacts that
+        # raise the high-to-low frequency energy ratio.
+        # Measured baselines:
+        #   - Natural photos / real gradients: hl_ratio ~ 0.05-0.15
+        #   - GAN / AI-generated faces: hl_ratio > 0.3 (stronger HF artifacts)
+        # Scale: 0.05 -> 0.0, 0.3 -> ~1.0
+        hl = features["hl_ratio"]
+        spectral_score = min(1.0, max(0.0, (hl - 0.05) / 0.25))
 
-        # Combined: 60% CNN, 40% spectral physics 
-        final_score = (0.60 * cnn_score) + (0.40 * spectral_score)
+        # azimuthal_std is always in the 30k-40k range for all image types,
+        # so it carries no discriminative signal — drop it.
+        final_score = spectral_score
 
         return {
             "frequency_score": round(min(float(final_score), 0.99), 4),

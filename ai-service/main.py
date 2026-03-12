@@ -65,12 +65,17 @@ async def startup():
 
 
 @app.get("/")
-def health():
+def home():
     return {
         "service": "AuthenticEye v5.0",
-        "device": "cuda" if torch.cuda.is_available() else "cpu",
+        "status": "online",
         "modules": ["ensemble", "frequency", "gan_fingerprint", "diffusion", "temporal_video"],
     }
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy", "device": "cuda" if torch.cuda.is_available() else "cpu"}
 
 
 # ─── Image Detection ─────────────────────────────────────────────────────────
@@ -97,21 +102,27 @@ async def detect_image(file: UploadFile = File(...)):
             loop.run_in_executor(None, diff_detector.predict, pil_image),
         )
 
-        # 2. Weighted ensemble (Step 7 weights)
-        eff_score = ensemble_result["model_scores"]["efficientnet_b4"]
+        # 2. Weighted ensemble
+        # NOTE: CNN models (eff/xcep/vit) use ImageNet pretrained weights only —
+        # no deepfake fine-tuning. Their scores are unreliable.
+        # Physics-based signals (freq/gan/diff) are grounded in forensic science
+        # and work WITHOUT training data. Weight accordingly.
+        eff_score  = ensemble_result["model_scores"]["efficientnet_b4"]
         xcep_score = ensemble_result["model_scores"]["xceptionnet"]
-        vit_score = ensemble_result["model_scores"]["vision_transformer"]
+        vit_score  = ensemble_result["model_scores"]["vision_transformer"]
         freq_score = freq_result["frequency_score"]
-        gan_score = gan_result["gan_probability"]
+        gan_score  = gan_result["gan_probability"]
         diff_score = diff_result["diffusion_probability"]
 
+        # CNN models: 25% total weight (they are not fine-tuned)
+        # Physics signals: 75% total weight (reliable without training)
         final_deepfake_prob = (
-            0.30 * eff_score +
-            0.25 * xcep_score +
-            0.20 * vit_score +
-            0.10 * freq_score +
-            0.10 * gan_score +
-            0.05 * diff_score
+            0.08 * eff_score  +
+            0.08 * xcep_score +
+            0.09 * vit_score  +
+            0.35 * freq_score +
+            0.25 * gan_score  +
+            0.15 * diff_score
         )
         final_deepfake_prob = round(min(0.99, max(0.01, final_deepfake_prob)), 4)
 
