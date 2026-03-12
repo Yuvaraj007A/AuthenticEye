@@ -32,7 +32,6 @@ Redis (Queue — future job processing)
 |---|---|---|
 | Image | Face crop → ELA → Ensemble | EfficientNet-B4, XceptionNet, ViT |
 | Video | Frame extraction → Per-frame ensemble | Same as image |
-| Audio | Mel Spectrogram → CNN | MobileNetV3-Small |
 | Explainability | Grad-CAM heatmaps | EfficientNet primary model |
 
 ---
@@ -137,13 +136,6 @@ Content-Type: multipart/form-data
 Body: video (file)  [max 500MB]
 ```
 
-### Audio Detection
-```
-POST /api/detect/audio
-Content-Type: multipart/form-data
-Body: audio (file)  [max 50MB]
-```
-
 ### Analysis History (Authenticated)
 ```
 GET    /api/history
@@ -217,8 +209,7 @@ AuthenticEye/
 │   ├── model.py       # Ensemble (EfficientNet + Xception + ViT)
 │   ├── preprocessing.py # Face detection + ELA
 │   ├── gradcam.py     # Explainability heatmaps
-│   ├── video_detector.py
-│   └── audio_detector.py
+│   └── video_detector.py
 ├── training/          # Training pipeline
 │   └── train.py       # Multi-GPU, TensorBoard, checkpoints
 └── docker-compose.yml
