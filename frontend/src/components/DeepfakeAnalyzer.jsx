@@ -86,6 +86,8 @@ const DeepfakeAnalyzer = ({ onResult }) => {
     const formData = new FormData();
     formData.append(currentTab.field, file);
 
+    const startTime = performance.now();
+
     try {
       const res = await api.post(currentTab.route, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -94,9 +96,13 @@ const DeepfakeAnalyzer = ({ onResult }) => {
           setProgress(up);
         },
       });
+      const endTime = performance.now();
+      const timeInSecs = ((endTime - startTime) / 1000).toFixed(2);
+      
       setProgress(100);
-      setResult(res.data);
-      if (onResult) onResult(res.data);
+      const outputData = { ...res.data, analysisTimeSeconds: timeInSecs };
+      setResult(outputData);
+      if (onResult) onResult(outputData);
     } catch (err) {
       setError(
         err.response?.data?.detail ||

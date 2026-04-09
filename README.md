@@ -1,216 +1,120 @@
 # AuthenticEye — Forensic-Grade Deepfake Detection Platform
 
-A production-ready, SaaS-architecture deepfake detection platform capable of detecting manipulated images, videos, and audio using a state-of-the-art ensemble of deep learning models.
+A production-ready deepfake detection platform that combines state-of-the-art Deep Learning (CNNs/Transformers) with Physics-based Forensic Science to detect manipulated images and videos with high reliability, even without massive training data.
 
 ---
 
-## System Architecture
+## 🏗️ System Architecture
 
+```mermaid
+graph TD
+    A[React Frontend] -->|REST API| B[Express.js Backend]
+    B -->|Forward Request| C[FastAPI AI Service]
+    C --> D{Ensemble Engine}
+    D --> E[Physics-Based Signals 75%]
+    D --> F[CNN/ViT Models 25%]
+    E --> G[FFT Frequency Analysis]
+    E --> H[GAN Noise Fingerprinting]
+    E --> I[Diffusion Artifact Detection]
+    F --> J[EfficientNet-B4]
+    F --> K[XceptionNet]
+    F --> L[Vision Transformer]
+    B --> M[(MongoDB Atlas)]
+    C --> N[Face Detection / Alignment]
 ```
-Client Browser
-    ↓
-React Frontend (Vite + TailwindCSS + Framer Motion)
-    ↓
-Express.js Backend API (Node.js + JWT + Multer)
-    ↓
-FastAPI AI Microservice (Python + PyTorch)
-    ↓
-Ensemble Detection Models
-  ├─ EfficientNet-B4
-  ├─ XceptionNet
-  └─ Vision Transformer (ViT-B/16)
-    ↓
-MongoDB Atlas (Analysis Storage)
-Redis (Queue — future job processing)
-```
 
 ---
 
-## AI Detection Capabilities
+## 🔬 AI Detection Strategy (Physics-First)
 
-| Media Type | Method | Models |
-|---|---|---|
-| Image | Face crop → ELA → Ensemble | EfficientNet-B4, XceptionNet, ViT |
-| Video | Frame extraction → Per-frame ensemble | Same as image |
-| Explainability | Grad-CAM heatmaps | EfficientNet primary model |
+AuthenticEye uses a unique **Physics-First Ensemble**. Unlike standard detectors that rely 100% on black-box neural networks, we weight scientific forensic signals at 75% to ensure accuracy on "in-the-wild" deepfakes.
+
+| Method | Purpose | Why it works |
+| :--- | :--- | :--- |
+| **FFT Frequency** | Image Synthesis | GAN upsampling leaves periodic "checkerboard" artifacts in the FFT magnitude spectrum. |
+| **GAN Fingerprint** | Model Forensic | Every GAN generator leaves model-specific residual noise with Super-Gaussian kurtosis. |
+| **Diffusion Analysis** | Stable Diffusion | Denoising diffusion models produce isotropic noise and unnaturally high color coherence. |
+| **Deep Ensemble** | Visual Pattern | EfficientNet, Xception, and ViT look for high-level semantic inconsistencies in faces. |
 
 ---
 
-## Quick Start (Local Development)
+## 🚀 Quick Start (Local Development)
 
-### Prerequisites
-- Node.js ≥ 18
-- Python ≥ 3.14
-- MongoDB running locally (or Atlas URI)
+### 1. Prerequisites
+- **Node.js** v18+
+- **Python** 3.11+ (with `venv`)
+- **MongoDB** running locally or via Atlas
 
-### 1. Backend Setup
-```bash
+### 2. Manual Service Startup
+Open 3 separate terminals in the project root:
+
+**Terminal 1: Backend**
+```powershell
 cd backend
-cp ../.env.example .env   # Edit values
+# Note: Ensure .env exists with AI_SERVICE_URL=http://localhost:8000
 npm install
-npm run dev
+node server.js
 ```
 
-### 2. AI Service Setup
-```bash
+**Terminal 2: AI Service**
+```powershell
 cd ai-service
-python -m venv venv
-venv\Scripts\activate     # Windows
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# Requires python -m venv venv and pip install -r requirements.txt
+.\venv\Scripts\activate
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-### 3. Frontend Setup
-```bash
+**Terminal 3: Frontend**
+```powershell
 cd frontend
-echo "VITE_API_URL=http://localhost:5000/api" > .env
+# Note: Ensure .env exists with VITE_API_URL=http://localhost:5000/api
 npm install
 npm run dev
 ```
 
 ---
 
-## Docker Deployment
+## 🏋️ Training Pipeline
 
-```bash
-# Copy and configure env
-cp .env.example .env
+AuthenticEye includes a comprehensive training suite supporting both local and cloud devices.
 
-# Build and start all services
-docker compose up --build -d
+### 1. Cloud Training (Recommended)
+Use the included **[AuthenticEye_Colab_Training.ipynb](./AuthenticEye_Colab_Training.ipynb)** to train on high-end GPUs.
+- Mount Google Drive
+- Connect to T4/A100 GPU
+- Automated Dataset Preparation & Training
 
-# Enable GPU (requires nvidia-container-toolkit)
-# Uncomment the `deploy.resources` section in docker-compose.yml
-```
+### 2. Local Training
+```powershell
+cd ai-service
+# 1. Prepare data (Kaggle or Local)
+python scripts/prepare_dataset.py --source ./raw_data --dest ./prepared_data --download-sample
 
-Services will be available at:
-- Frontend: http://localhost:80
-- Backend API: http://localhost:5000
-- AI Service: http://localhost:8000
-
----
-
-## Training Your Own Model
-
-Fine-tune on FaceForensics++, DFDC, Celeb-DF, or DeeperForensics:
-
-```bash
-# Prepare dataset in:
-# data/train/real/  ← real images
-# data/train/fake/  ← fake images
-# data/val/real/
-# data/val/fake/
-
-cd training
-
-# Train EfficientNet-B4
-python train.py --model efficientnet_b4 --data_dir ../data --epochs 30 --batch_size 32
-
-# Train XceptionNet
-python train.py --model xceptionnet --data_dir ../data --epochs 30
-
-# Train ViT
-python train.py --model vit --data_dir ../data --epochs 30
-
-# Monitor with Tensorboard
-tensorboard --logdir ./tensorboard_logs
-```
-
-Checkpoints are automatically saved to `ai-service/checkpoints/` and loaded on next service start.
-
----
-
-## API Reference
-
-### Image Detection
-```
-POST /api/detect/image
-Content-Type: multipart/form-data
-Body: image (file)
-```
-
-### Video Detection
-```
-POST /api/detect/video
-Content-Type: multipart/form-data
-Body: video (file)  [max 500MB]
-```
-
-### Analysis History (Authenticated)
-```
-GET    /api/history
-GET    /api/history/:id
-DELETE /api/history/:id
+# 2. Train Models
+python training/trainer.py --model efficientnet_b4 --data_dir ./prepared_data --epochs 50 --use_amp
 ```
 
 ---
 
-## Result Schema
-```json
-{
-  "deepfakeProbability": 0.9312,
-  "authenticityScore": 0.0688,
-  "mediaType": "image",
-  "faceDetected": true,
-  "modelScores": {
-    "efficientnet_b4": 0.94,
-    "xceptionnet": 0.91,
-    "vision_transformer": 0.88
-  },
-  "heatmapBase64": "<base64 JPEG for Grad-CAM overlay>",
-  "aiDetail": { ... }
-}
-```
-
----
-
-## GPU Inference
-
-The AI service automatically uses CUDA if available:
-
-```python
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(DEVICE)
-```
-
-For Docker GPU, uncomment the `deploy.resources` section in `docker-compose.yml` and ensure `nvidia-container-toolkit` is installed.
-
----
-
-## Security Features
-
-- JWT authentication with expiry
-- Helmet.js HTTP security headers
-- Rate limiting (100 req / 15 min per IP)
-- File type validation (MIME + extension)
-- Upload size limits per media type
-- CORS protection
-- Files deleted immediately after processing
-
----
-
-## Project Structure
+## 📂 Project Structure
 
 ```
 AuthenticEye/
-├── frontend/          # React + Vite + TailwindCSS
-│   └── src/
-│       ├── components/
-│       │   ├── DeepfakeAnalyzer.jsx
-│       │   ├── HeatmapViewer.jsx
-│       │   ├── ResultCard.jsx
-│       │   └── ...
-│       └── pages/
-├── backend/           # Node.js + Express + MongoDB
-│   ├── routes/        # auth.js, detect.js, history.js
-│   └── models/        # User.js, Analysis.js
-├── ai-service/        # Python FastAPI + PyTorch
-│   ├── main.py        # API entrypoint
-│   ├── model.py       # Ensemble (EfficientNet + Xception + ViT)
-│   ├── preprocessing.py # Face detection + ELA
-│   ├── gradcam.py     # Explainability heatmaps
-│   └── video_detector.py
-├── training/          # Training pipeline
-│   └── train.py       # Multi-GPU, TensorBoard, checkpoints
-└── docker-compose.yml
+├── frontend/          # React (Vite) + TailwindCSS
+├── backend/           # Node.js Express API
+├── ai-service/        # Python FastAPI engine
+│   ├── features/      # Physics & Signal extractors
+│   ├── models/        # Ensemble (EfficientNet, Xception, ViT)
+│   ├── training/      # Core training logic
+│   └── scripts/       # Dataset pipelines
+└── training/          # Legacy/Utility training scripts
 ```
+
+---
+
+## 🛡️ Security Features
+
+- **JWT Authentication** for history and dashboards.
+- **Helmet.js** security headers.
+- **Express-rate-limit** to prevent API abuse.
+- **Automatic Cleanup:** Files are unlinked immediately after AI analysis.

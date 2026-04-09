@@ -39,7 +39,15 @@ tensorboard_logs/
 .env.local
 .env.production
 
+# AI Data & Artifacts
+ai-service/prepared_data/
+ai-service/raw_data/
+ai-service/checkpoints/
+*.pt
+*.pth
+
 # IDE
 .vscode/
 .idea/
 *.swp
+AuthenticEye.code-workspace

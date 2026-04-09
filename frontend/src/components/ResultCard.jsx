@@ -1,64 +1,28 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, ShieldX, BrainCircuit, Fingerprint, Sparkles, Radio, Clock } from 'lucide-react';
+import { ShieldCheck, ShieldX, BrainCircuit, Fingerprint, Sparkles, Radio, Clock, Zap } from 'lucide-react';
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+const ScoreRow = ({ label, value, icon: Icon, color, delay = 0 }) => {
+  const isHigh = typeof value === 'number' && value > 0.5;
+  const statusText = typeof value === 'number' ? (isHigh ? 'High Risk' : 'Normal') : value;
 
-const ConfidenceMeter = ({ value, isFake }) => {
-  const pct = Math.round(value * 100);
   return (
-    <div className="relative w-36 h-36 mx-auto">
-      <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-        <circle cx="60" cy="60" r="50" fill="none" stroke="#f1f5f9" strokeWidth="12" />
-        <motion.circle
-          cx="60" cy="60" r="50" fill="none"
-          stroke={isFake ? '#f43f5e' : '#10b981'}
-          strokeWidth="12"
-          strokeLinecap="round"
-          strokeDasharray={`${2 * Math.PI * 50}`}
-          initial={{ strokeDashoffset: 2 * Math.PI * 50 }}
-          animate={{ strokeDashoffset: 2 * Math.PI * 50 * (1 - value) }}
-          transition={{ duration: 1.4, ease: 'easeOut' }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`text-3xl font-black ${isFake ? 'text-rose-600' : 'text-emerald-600'}`}>
-          {pct}%
-        </span>
-        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-          {isFake ? 'Fake' : 'Real'}
-        </span>
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay, duration: 0.3 }}
+      className="flex justify-between items-center py-2.5 border-b border-slate-100 last:border-0"
+    >
+      <div className="flex items-center gap-2.5 text-slate-600">
+        <Icon size={16} className={color} />
+        <span className="font-medium text-sm">{label}</span>
       </div>
-    </div>
+      <span className={`font-bold text-xs px-2.5 py-1 rounded-md ${isHigh ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+        {statusText}
+      </span>
+    </motion.div>
   );
 };
-
-const ScoreRow = ({ label, value, icon: Icon, color, delay = 0 }) => (
-  <motion.div
-    initial={{ opacity: 0, x: -10 }}
-    animate={{ opacity: 1, x: 0 }}
-    transition={{ delay, duration: 0.3 }}
-    className="space-y-1"
-  >
-    <div className="flex justify-between items-center text-xs">
-      <div className="flex items-center gap-1.5 text-slate-600">
-        <Icon size={12} className={color} />
-        <span className="font-medium">{label}</span>
-      </div>
-      <span className={`font-bold text-xs ${parseFloat(value) > 50 ? 'text-rose-600' : 'text-emerald-600'}`}>
-        {typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : value}
-      </span>
-    </div>
-    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-      <motion.div
-        initial={{ width: 0 }}
-        animate={{ width: `${Math.min(typeof value === 'number' ? value * 100 : 0, 100)}%` }}
-        transition={{ delay, duration: 0.8, ease: 'easeOut' }}
-        className={`h-1.5 rounded-full ${(typeof value === 'number' ? value : 0) > 0.5 ? 'bg-rose-400' : 'bg-emerald-400'}`}
-      />
-    </div>
-  </motion.div>
-);
 
 // ─── Main ResultCard ───────────────────────────────────────────────────────────
 
@@ -66,14 +30,14 @@ const ResultCard = ({ result, imageUrl }) => {
   if (!result) return null;
 
   const prob = result.deepfakeProbability ?? result.deepfake_probability ?? 0;
-  const auth = result.authenticityScore ?? result.authenticity_score ?? 0;
   const isFake = prob > 0.5;
+  const analysisTime = result.analysisTimeSeconds || 'N/A';
   const mediaType = result.mediaType || 'image';
   const ai = result.aiDetail || {};
 
-  const modelScores = ai.model_scores || result.modelScores || {};
-  const ganProb = ai.gan_probability ?? result.ganProbability ?? 0;
-  const diffProb = ai.diffusion_probability ?? result.diffusionProbability ?? 0;
+  const modelScores = ai.model_scores || result.modelScores || result.model_scores || {};
+  const ganProb = ai.gan_probability ?? result.ganProbability ?? result.gan_probability ?? 0;
+  const diffProb = ai.diffusion_probability ?? result.diffusionProbability ?? result.diffusion_probability ?? 0;
   const temporalScore = ai.temporal_score ?? null;
   const temporalDrift = ai.temporal_drift ?? null;
 
@@ -81,9 +45,9 @@ const ResultCard = ({ result, imageUrl }) => {
     { key: 'efficientnet_b4', label: 'EfficientNet-B4', icon: BrainCircuit, color: 'text-violet-500' },
     { key: 'xceptionnet', label: 'XceptionNet', icon: BrainCircuit, color: 'text-blue-500' },
     { key: 'vision_transformer', label: 'Vision Transformer', icon: BrainCircuit, color: 'text-indigo-500' },
-    { key: 'frequency_cnn', label: 'Frequency CNN', icon: Radio, color: 'text-amber-500' },
+    { key: 'frequency_cnn', label: 'Frequency Array', icon: Radio, color: 'text-amber-500' },
     { key: 'gan_fingerprint', label: 'GAN Fingerprint', icon: Fingerprint, color: 'text-rose-500' },
-    { key: 'diffusion_detector', label: 'Diffusion Detector', icon: Sparkles, color: 'text-fuchsia-500' },
+    { key: 'diffusion_detector', label: 'Diffusion Traces', icon: Sparkles, color: 'text-fuchsia-500' },
   ];
 
   return (
@@ -93,26 +57,41 @@ const ResultCard = ({ result, imageUrl }) => {
       className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
     >
       {/* ─── Verdict Banner ─── */}
-      <div className={`px-6 py-4 flex items-center gap-4 ${isFake ? 'bg-rose-50 border-b border-rose-100' : 'bg-emerald-50 border-b border-emerald-100'}`}>
-        {isFake ? <ShieldX size={32} className="text-rose-500 flex-shrink-0" /> : <ShieldCheck size={32} className="text-emerald-500 flex-shrink-0" />}
-        <div>
-          <p className="text-xs uppercase tracking-widest font-bold text-slate-400">
-            {mediaType.toUpperCase()} FORENSIC VERDICT
-          </p>
-          <h2 className={`text-2xl font-black ${isFake ? 'text-rose-600' : 'text-emerald-700'}`}>
-            {isFake ? '⚠️ MANIPULATED MEDIA DETECTED' : '✅ AUTHENTIC MEDIA'}
-          </h2>
+      <div className={`px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4 ${isFake ? 'bg-rose-50 border-b border-rose-100' : 'bg-emerald-50 border-b border-emerald-100'}`}>
+        <div className="flex items-center gap-4">
+          {isFake ? <ShieldX size={40} className="text-rose-500 flex-shrink-0" /> : <ShieldCheck size={40} className="text-emerald-500 flex-shrink-0" />}
+          <div>
+            <p className="text-xs uppercase tracking-widest font-bold text-slate-500">
+              {mediaType.toUpperCase()} ANALYSIS RESULT
+            </p>
+            <h2 className={`text-3xl font-black mt-1 ${isFake ? 'text-rose-600' : 'text-emerald-700'}`}>
+              {isFake ? 'FAKE' : 'REAL'}
+            </h2>
+          </div>
         </div>
+        
+        {/* Analysis Time */}
+        {analysisTime !== 'N/A' && (
+          <div className="flex items-center gap-3 bg-white/60 px-4 py-2.5 rounded-xl backdrop-blur-sm border border-white">
+            <div className="p-2 bg-amber-100 rounded-lg">
+              <Zap size={20} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Analysis Time</p>
+              <p className="text-sm font-black text-slate-800">{analysisTime} Seconds</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="p-6 md:p-8">
         <div className="grid md:grid-cols-2 gap-8">
 
-          {/* ─── LEFT: Image + Confidence Meter ─── */}
+          {/* ─── LEFT: Image & Core Stats ─── */}
           <div className="space-y-6">
             {imageUrl && (
-              <div className="relative rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
-                <img src={imageUrl} alt="Analyzed" className="w-full max-h-56 object-contain" />
+              <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                <img src={imageUrl} alt="Analyzed" className="w-full max-h-64 object-contain" />
                 <motion.div
                   initial={{ top: '0%' }}
                   animate={{ top: '100%' }}
@@ -122,45 +101,49 @@ const ResultCard = ({ result, imageUrl }) => {
               </div>
             )}
 
-            {/* Confidence Meter */}
-            <div className="text-center">
-              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-3">
-                Confidence Meter
-              </p>
-              <ConfidenceMeter value={isFake ? prob : auth} isFake={isFake} />
-            </div>
-
             {/* Specialized scores for image */}
             {mediaType === 'image' && (
-              <div className="space-y-2 pt-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Specialized Analysis</p>
-                <ScoreRow label="GAN Fingerprint Probability" value={ganProb} icon={Fingerprint} color="text-rose-500" delay={0.1} />
-                <ScoreRow label="Diffusion Model Probability" value={diffProb} icon={Sparkles} color="text-fuchsia-500" delay={0.2} />
+              <div className="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Specialized Analysis</p>
+                <ScoreRow label="GAN Fingerprint" value={ganProb} icon={Fingerprint} color="text-rose-500" delay={0.1} />
+                <ScoreRow label="Diffusion Model Traces" value={diffProb} icon={Sparkles} color="text-fuchsia-500" delay={0.2} />
               </div>
             )}
 
             {/* Video temporal stats */}
             {mediaType === 'video' && temporalScore !== null && (
-              <div className="space-y-2 pt-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Temporal Analysis</p>
+              <div className="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Temporal Analysis</p>
                 <ScoreRow label="Temporal Inconsistency" value={temporalScore} icon={Clock} color="text-violet-500" delay={0.1} />
-                <ScoreRow label="Feature Drift Score" value={temporalDrift ?? 0} icon={Radio} color="text-amber-500" delay={0.2} />
+                <ScoreRow label="Feature Drift Status" value={temporalDrift ?? 0} icon={Radio} color="text-amber-500" delay={0.2} />
               </div>
             )}
           </div>
 
           {/* ─── RIGHT: Per-model scores ─── */}
-          <div className="space-y-5">
+          <div className="space-y-6">
+            
+            {/* Final Verdict Banner - Replaces the old percentages */}
+            <div className={`p-6 rounded-2xl border ${isFake ? 'border-rose-200 bg-rose-50/50' : 'border-emerald-200 bg-emerald-50/50'} text-center flex flex-col items-center justify-center`}>
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 shadow-sm ${isFake ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                {isFake ? <ShieldX size={32} /> : <ShieldCheck size={32} />}
+              </div>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">Final Conclusion</p>
+              <p className={`text-2xl font-black ${isFake ? 'text-rose-700' : 'text-emerald-700'}`}>
+                {isFake ? 'Synthetically Generated' : 'Authentic Media'}
+              </p>
+            </div>
+
             {/* Model breakdown */}
             {Object.keys(modelScores).length > 0 && (
-              <div>
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-2 mb-4">
                   <BrainCircuit size={16} className="text-violet-500" />
                   <p className="text-xs font-bold uppercase tracking-wider text-violet-600">
                     6-Module Ensemble Breakdown
                   </p>
                 </div>
-                <div className="space-y-3">
+                <div className="flex flex-col">
                   {MODEL_META.map((m, i) => {
                     const val = modelScores[m.key];
                     if (val === undefined) return null;
@@ -179,44 +162,24 @@ const ResultCard = ({ result, imageUrl }) => {
               </div>
             )}
 
-            {/* Authenticity Score */}
-            <div className={`p-4 rounded-xl border ${isFake ? 'border-rose-100 bg-rose-50/50' : 'border-emerald-100 bg-emerald-50/50'}`}>
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Authenticity Score</p>
-                  <p className={`text-3xl font-black mt-1 ${isFake ? 'text-rose-600' : 'text-emerald-700'}`}>
-                    {(auth * 100).toFixed(1)}%
-                  </p>
-                </div>
-                <div className={`text-5xl`}>{isFake ? '🔴' : '🟢'}</div>
-              </div>
-            </div>
-
             {/* Video frame stats */}
             {ai.frames_analyzed && (
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <p className="font-bold text-slate-800 text-lg">{ai.frames_analyzed}</p>
-                  <p className="text-xs text-slate-400">Frames</p>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
+                  <p className="font-black text-slate-800 text-xl">{ai.frames_analyzed}</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 mt-1">Frames</p>
                 </div>
-                <div className="p-3 bg-rose-50 rounded-xl border border-rose-100">
-                  <p className="font-bold text-rose-700 text-lg">{ai.flagged_frames}</p>
-                  <p className="text-xs text-rose-400">Flagged</p>
+                <div className="p-4 bg-rose-50 rounded-xl border border-rose-100 shadow-sm">
+                  <p className="font-black text-rose-700 text-xl">{ai.flagged_frames}</p>
+                  <p className="text-[10px] uppercase font-bold text-rose-400 mt-1">Flagged</p>
                 </div>
-                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                  <p className="font-bold text-emerald-700 text-lg">{ai.faces_detected_in}</p>
-                  <p className="text-xs text-emerald-400">Faces</p>
+                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 shadow-sm">
+                  <p className="font-black text-emerald-700 text-xl">{ai.faces_detected_in}</p>
+                  <p className="text-[10px] uppercase font-bold text-emerald-400 mt-1">Faces</p>
                 </div>
               </div>
             )}
 
-            {/* Audit trail */}
-            <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-500 italic leading-relaxed">
-              <strong>Forensic Engine v5.0:</strong> Ensemble of EfficientNet-B4 (30%) + XceptionNet (25%) + ViT (20%) +
-              Frequency CNN (10%) + GAN Fingerprint (10%) + Diffusion Detector (5%).{' '}
-              {mediaType === 'image' && 'Face aligned via MediaPipe 468-pt landmarks. Grad-CAM heatmap available below.'}
-              {mediaType === 'video' && 'Temporal LSTM models inter-frame inconsistency across extracted frames.'}
-            </div>
           </div>
         </div>
       </div>
