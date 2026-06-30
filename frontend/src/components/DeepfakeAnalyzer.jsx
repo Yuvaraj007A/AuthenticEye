@@ -25,7 +25,7 @@ const TABS = [
     field: 'video',
     maxMB: 500,
     hint: 'MP4 · MOV · AVI · WEBM',
-  },
+  }
 ];
 
 const DeepfakeAnalyzer = ({ onResult }) => {
@@ -143,17 +143,18 @@ const DeepfakeAnalyzer = ({ onResult }) => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
+          className="w-full"
         >
-          <div
-            className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all
-              ${dragOver ? 'border-emerald-400 bg-emerald-50/60 scale-[1.01]' : ''}
-              ${file ? 'border-emerald-300 bg-emerald-50/20' : !dragOver ? 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/10' : ''}
-              ${!file ? 'cursor-pointer' : ''}`}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            onClick={() => !file && fileRef.current.click()}
-          >
+            <div
+              className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all
+                ${dragOver ? 'border-emerald-400 bg-emerald-50/60 scale-[1.01]' : ''}
+                ${file ? 'border-emerald-300 bg-emerald-50/20' : !dragOver ? 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/10' : ''}
+                ${!file ? 'cursor-pointer' : ''}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => !file && fileRef.current.click()}
+            >
             {!file ? (
               <div className="flex flex-col items-center gap-4 py-10">
                 <motion.div
@@ -225,7 +226,7 @@ const DeepfakeAnalyzer = ({ onResult }) => {
       {loading && (
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-slate-500">
-            <span>Running {activeTab === 'image' ? '6-module' : 'temporal LSTM'} analysis...</span>
+            <span>Running {activeTab === 'image' ? '6-detector modular registry' : 'adaptive flow & temporal LSTM'} analysis...</span>
             <span>{progress}%</span>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -238,8 +239,8 @@ const DeepfakeAnalyzer = ({ onResult }) => {
           </div>
           <p className="text-center text-xs text-slate-400">
             {activeTab === 'image'
-              ? 'EfficientNet · XceptionNet · ViT · Frequency · GAN Fingerprint · Diffusion'
-              : 'Extracting frames → Face detection → CNN features → LSTM temporal analysis'}
+              ? 'EfficientNet · Xception · Frequency Forensics · SynthID · Metadata'
+              : 'Adaptive scene frame extract → Farneback flow → Embed cosine drift → Temporal LSTM'}
           </p>
         </div>
       )}

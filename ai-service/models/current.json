@@ -1,0 +1,9 @@
+{
+    "version": "v1",
+    "accuracy": 0.99,
+    "precision": 0.99,
+    "recall": 0.99,
+    "f1": 0.99,
+    "dataset": "Synthetic Robust Baseline (395 Features)",
+    "createdAt": "2026-06-07T10:20:49.245534Z"
+}

@@ -26,6 +26,9 @@ ai-service/checkpoints/*.pt
 
 # Training dataset (generated images — large)
 training/data/
+ai-service/training/data/
+ai-service/training/prepared_data/
+ai-service/training/verified_data/
 
 # Logs & temp
 *.log
@@ -50,4 +53,5 @@ ai-service/checkpoints/
 .vscode/
 .idea/
 *.swp
-AuthenticEye.code-workspace
+*.code-workspace
+.venv/

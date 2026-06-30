@@ -1,0 +1,20 @@
+{
+    "accuracy": 0.425,
+    "precision": 0.4118,
+    "recall": 0.35,
+    "f1": 0.3784,
+    "roc_auc": 0.4862,
+    "confusion_matrix": [
+        [
+            10,
+            10
+        ],
+        [
+            13,
+            7
+        ]
+    ],
+    "total_samples": 40,
+    "real_samples": 20,
+    "fake_samples": 20
+}

@@ -54,18 +54,22 @@ class AuthenticEyePipeline:
         
     def load_checkpoints(self, ckpt_dir):
         """Loads weights for all trainable models if available."""
-        models = {
-            "efficientnet_b4_best.pth": self.eff,
-            "xceptionnet_best.pth": self.xcep,
-            "vit_best.pth": self.vit,
-            "fusion_mlp.pth": self.fusion_mlp,
-            "video_lstm.pth": self.video_lstm
-        }
+        models = [
+            (["efficientnet_b4_best.pth", "efficientnet_b4.pth"], self.eff),
+            (["xceptionnet_best.pth", "xceptionnet.pth"], self.xcep),
+            (["vit_best.pth", "vit.pth"], self.vit),
+            (["fusion_mlp.pth"], self.fusion_mlp),
+            (["video_lstm.pth"], self.video_lstm),
+        ]
         
         import os
-        for fname, model in models.items():
-            path = os.path.join(ckpt_dir, fname)
-            if os.path.exists(path):
+        for filenames, model in models:
+            path = next(
+                (os.path.join(ckpt_dir, fname) for fname in filenames
+                 if os.path.exists(os.path.join(ckpt_dir, fname))),
+                None,
+            )
+            if path:
                 try:
                     ckpt = torch.load(path, map_location=self.device)
                     # Handle state dict wrapped in 'model_state'
@@ -73,11 +77,11 @@ class AuthenticEyePipeline:
                         model.load_state_dict(ckpt['model_state'])
                     else:
                         model.load_state_dict(ckpt)
-                    print(f"Loaded: {fname}")
+                    print(f"Loaded: {os.path.basename(path)}")
                 except Exception as e:
-                    print(f"Failed to load {fname}: {e}")
+                    print(f"Failed to load {os.path.basename(path)}: {e}")
             else:
-                print(f"Checkpoint not found for {fname}, using raw initialization.")
+                print(f"Checkpoint not found for {filenames[0]}, using raw initialization.")
 
     def extract_features(self, pil_img: Image.Image) -> list[float]:
         """Runs all models and extractors on a single image to produce the 16-dim vector."""
@@ -123,6 +127,8 @@ class AuthenticEyePipeline:
         
         return {
             "result": "Fake (Synthetically Generated)" if prob > 0.5 else "Real (Authentic Media)",
+            "deepfake_probability": round(float(prob), 4),
+            "authenticity_score": round(float(1.0 - prob), 4),
             "analysis_time_seconds": round(analysis_time, 4),
             "features_extracted": [round(f, 4) for f in features]
         }

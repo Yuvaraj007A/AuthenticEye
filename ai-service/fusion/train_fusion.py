@@ -11,19 +11,26 @@ from fusion_model import AuthenticEyeFusionMLP
 def train_fusion_model(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    # In a real scenario, you run your dataset through the base extractors 
-    # and save the 16-dim vectors into an .npy file to rapidly train the MLP.
-    if os.path.exists(args.features_file):
-        data = torch.load(args.features_file)
-        X = data['features']
-        y = data['labels']
-    else:
-        print(f"File {args.features_file} not found. Generating dummy features for tests.")
-        X = torch.randn(1000, 16)
-        y = torch.randint(0, 2, (1000, 1)).float()
+    if not os.path.exists(args.features_file):
+        raise FileNotFoundError(
+            f"{args.features_file} not found. Run scripts/extract_features.py first; "
+            "training a production fusion model on dummy data is disabled."
+        )
+
+    data = torch.load(args.features_file)
+    X = data['features']
+    y = data['labels']
+
+    if X.ndim != 2 or X.shape[1] != 16:
+        raise ValueError(f"Expected features with shape [N, 16], got {tuple(X.shape)}")
+    if y.ndim == 1:
+        y = y.unsqueeze(1)
+    if len(X) != len(y):
+        raise ValueError(f"Feature/label length mismatch: {len(X)} features vs {len(y)} labels")
         
+    y_np = y.numpy()
     X_train, X_val, y_train, y_val = train_test_split(
-        X.numpy(), y.numpy(), test_size=0.2, random_state=42, stratify=y.numpy()
+        X.numpy(), y_np, test_size=0.2, random_state=42, stratify=y_np.reshape(-1)
     )
     
     train_ds = TensorDataset(torch.FloatTensor(X_train), torch.FloatTensor(y_train))
@@ -79,10 +86,13 @@ def train_fusion_model(args):
             
     print(f"Finished. Best AUC: {best_val_auc:.4f}")
 
-if __name__ == "__main__":
+def main(args_list=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--features_file", type=str, default="extracted_features.pt")
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--save_path", type=str, default="fusion_mlp.pth")
-    args = parser.parse_args()
+    args = parser.parse_args(args_list)
     train_fusion_model(args)
+
+if __name__ == "__main__":
+    main()

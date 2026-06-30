@@ -1,0 +1,12 @@
+{
+  "weights": {
+    "EfficientNetDFDC": 0.30,
+    "XceptionFFPP": 0.30,
+    "FrequencyForensics": 0.20,
+    "SynthIDDetector": 0.10,
+    "MetadataAnalyzer": 0.10,
+    "C2PADetector": 0.10
+  },
+  "outlier_threshold": 0.35,
+  "confidence_calibration_scale": 1.1
+}

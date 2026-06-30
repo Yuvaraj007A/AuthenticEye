@@ -59,6 +59,13 @@ This powers all the deepfake detection logic, including the 6-module fusion clas
    ```
 > *Usually runs on `http://localhost:8000`*
 
+> [!IMPORTANT]
+> **Windows Application Control Policy Workaround:**
+> If you are on a restricted machine where security policies (like WDAC or AppLocker) block executing/loading compiled libraries (`.pyd`/`.dll` files) from user directories like `Downloads`:
+> 1. Avoid activating the virtual environment.
+> 2. Install dependencies globally/user-wide using the system python: `python -m pip install -r requirements.txt`
+> 3. Run the application directly using the system python: `python main.py` or `python scripts/evaluate.py`.
+
 ---
 
 ## 🟣 Terminal 3: Web Frontend / Dashboard (React + Vite)

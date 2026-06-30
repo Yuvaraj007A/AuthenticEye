@@ -194,15 +194,19 @@ def train_model(args):
             best_val_auc = val_auc
             patience_counter = 0
             ckpt_path = os.path.join(args.checkpoint_dir, f"{args.model}_best.pth")
+            active_ckpt_path = os.path.join(args.checkpoint_dir, f"{args.model}.pth")
             state = model.module.state_dict() if hasattr(model, "module") else model.state_dict()
-            torch.save({
+            checkpoint = {
                 "epoch": epoch,
                 "model_state": state,
                 "optimizer_state": optimizer.state_dict(),
                 "scaler_state": scaler.state_dict() if args.use_amp else None,
                 "best_val_auc": best_val_auc,
-            }, ckpt_path)
-            print(f"  ✅ New best checkpoint saved: {ckpt_path} (AUC={val_auc:.4f})")
+            }
+            torch.save(checkpoint, ckpt_path)
+            torch.save(checkpoint, active_ckpt_path)
+            print(f"  [SUCCESS] New best checkpoint saved: {ckpt_path} (AUC={val_auc:.4f})")
+            print(f"  [SUCCESS] Active serving checkpoint updated: {active_ckpt_path}")
         else:
             patience_counter += 1
             if patience_counter >= args.patience:

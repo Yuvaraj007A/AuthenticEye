@@ -14,7 +14,12 @@ const Register = () => {
     try {
       const res = await api.post('/auth/register', { name, email, password });
       localStorage.setItem('token', res.data.token);
-      navigate('/dashboard');
+      localStorage.setItem('role', res.data.user.role);
+      if (res.data.user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.msg || 'Registration failed');
     }

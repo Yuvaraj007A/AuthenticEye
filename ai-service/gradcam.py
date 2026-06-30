@@ -62,23 +62,27 @@ def _get_last_conv_layer(model):
     return last_conv
 
 
-def generate_gradcam_heatmap(ensemble_detector, input_tensor: torch.Tensor, original_pil: Image.Image) -> str:
+def generate_gradcam_heatmap(ensemble_detector, input_tensor: torch.Tensor, original_pil: Image.Image) -> tuple:
     """
     Run Grad-CAM on the primary EfficientNet model and return
-    a base64-encoded JPEG of the heatmap overlaid on the original image.
+    a tuple of (base64-encoded JPEG of the heatmap overlay, is_highly_suspicious).
     """
     try:
         primary_model = ensemble_detector.get_primary_model()
         target_layer = _get_last_conv_layer(primary_model)
 
         if target_layer is None:
-            return ""
+            return "", False
 
         grad_cam = GradCAM(primary_model, target_layer)
         heatmap = grad_cam.generate(input_tensor.clone().requires_grad_(True))
 
         if heatmap is None:
-            return ""
+            return "", False
+
+        # Check if the red suspicious region (value > 0.75) is too high (exceeds 15% of the image)
+        red_region_ratio = float(np.mean(heatmap > 0.75))
+        is_highly_suspicious = red_region_ratio > 0.15
 
         # Resize heatmap to original image size
         orig_w, orig_h = original_pil.size
@@ -98,8 +102,10 @@ def generate_gradcam_heatmap(ensemble_detector, input_tensor: torch.Tensor, orig
         buffer = io.BytesIO()
         pil_overlay.save(buffer, format="JPEG", quality=85)
         buffer.seek(0)
-        return base64.b64encode(buffer.read()).decode("utf-8")
+        b64_str = base64.b64encode(buffer.read()).decode("utf-8")
+        
+        return b64_str, is_highly_suspicious
 
     except Exception as e:
         print(f"Grad-CAM failed: {e}")
-        return ""
+        return "", False

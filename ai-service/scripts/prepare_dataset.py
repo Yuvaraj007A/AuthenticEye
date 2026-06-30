@@ -236,7 +236,7 @@ def split_dataset(source_dir, dest_dir, split_ratio=0.8, limit=None):
         train_dir.mkdir(parents=True, exist_ok=True)
         val_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"{cls.upper()} → Train: {len(train_imgs)} | Val: {len(val_imgs)}")
+        print(f"{cls.upper()} -> Train: {len(train_imgs)} | Val: {len(val_imgs)}")
 
         for img in train_imgs:
             shutil.copy2(img, train_dir / img.name)
@@ -253,7 +253,7 @@ def unzip_dataset(zip_path, extract_to):
     print("Extraction complete.")
 
 
-if __name__ == "__main__":
+def main(args_list=None):
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--source", type=str, required=True)
@@ -265,7 +265,7 @@ if __name__ == "__main__":
     parser.add_argument("--download-kaggle", type=str, default=None, help="Kaggle dataset ID, e.g., 'xhlulu/140k-real-and-fake-faces'")
     parser.add_argument("--limit", type=int, default=None, help="Maximum number of images to process per class")
 
-    args = parser.parse_args()
+    args = parser.parse_args(args_list)
 
     if args.download_sample:
         download_sample_dataset(args.source)
@@ -287,3 +287,6 @@ if __name__ == "__main__":
     split_dataset(args.source, args.dest, args.ratio, args.limit)
 
     print("Dataset ready for training!")
+
+if __name__ == "__main__":
+    main()
